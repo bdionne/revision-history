@@ -62,6 +62,7 @@ public class ChangeDetailsPanel extends JPanel implements Disposable {
             else if(event.equals(LogDiffEvent.AUTHOR_SELECTION_CHANGED) || event.equals(LogDiffEvent.COMMIT_SELECTION_CHANGED) ||
                     event.equals(LogDiffEvent.ONTOLOGY_UPDATED) || event.equals(LogDiffEvent.COMMIT_OCCURRED)) {
                 removeAll();
+                // a comment
                 repaint();
             }
             // rpc: when review view is active and a change is reviewed, recreate the review panel
