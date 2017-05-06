@@ -1,6 +1,7 @@
 package org.protege.editor.owl.client.diff.ui;
 
 import edu.stanford.protege.metaproject.api.AuthToken;
+import edu.stanford.protege.metaproject.api.ProjectId;
 import org.protege.editor.core.Disposable;
 import org.protege.editor.core.ui.error.ErrorLogPanel;
 import org.protege.editor.owl.OWLEditorKit;
@@ -15,12 +16,14 @@ import org.protege.editor.owl.client.event.CommitOperationEvent;
 import org.protege.editor.owl.client.ui.UserLoginPanel;
 import org.protege.editor.owl.model.OWLModelManager;
 import org.protege.editor.owl.server.api.CommitBundle;
+import org.protege.editor.owl.client.api.exception.ClientRequestException;
 import org.protege.editor.owl.server.policy.CommitBundleImpl;
 import org.protege.editor.owl.server.versioning.Commit;
 import org.protege.editor.owl.server.versioning.api.ChangeHistory;
 import org.protege.editor.owl.server.versioning.api.DocumentRevision;
 import org.protege.editor.owl.server.versioning.api.RevisionMetadata;
 import org.protege.editor.owl.server.versioning.api.VersionedOWLOntology;
+import org.protege.editor.owl.server.util.SnapShot;
 import org.semanticweb.owlapi.model.OWLOntologyChange;
 
 import javax.swing.*;
@@ -74,8 +77,8 @@ public class ReviewButtonsPanel extends JPanel implements Disposable {
         commitBtn = getButton("Commit", commitBtnListener);
         commitBtn.setToolTipText("Commit all change reviews");
 
-        downloadBtn = getButton("Download", downloadBtnListener);
-        downloadBtn.setToolTipText("Download the ontology without custom Protégé annotations");
+        downloadBtn = getButton("Squash History", downloadBtnListener);
+        downloadBtn.setToolTipText("Squash and Archive history on server");
         
         conceptHistoryBtn = getButton("History", conceptHistoryBtnListener);
         conceptHistoryBtn.setToolTipText("Push the concept history to the server");
@@ -145,14 +148,19 @@ public class ReviewButtonsPanel extends JPanel implements Disposable {
 
     private ActionListener downloadBtnListener = new ActionListener() {
         @Override
-        public void actionPerformed(ActionEvent e) {
-            List<OWLOntologyChange> changes = diffManager.removeCustomAnnotations();
+        public void actionPerformed(ActionEvent _e) {
+            ClientSession clientSession = ClientSession.getInstance(editorKit);
+            SnapShot snapshot = new SnapShot(clientSession.getActiveVersionOntology().getOntology());
+            ProjectId projectId = clientSession.getActiveProject();
+
             try {
-                editorKit.handleSaveAs();
-            } catch (Exception e1) {
-                e1.printStackTrace();
+                ((LocalHttpClient) clientSession.getActiveClient()).squashHistory(snapshot, projectId);
             }
-            diffManager.addCustomAnnotations(changes);
+            catch (ClientRequestException e) {
+                warn("Unable to squash history." + e);
+                return;
+            }
+            info("History squashed and archived on server.");
         }
     };
     
