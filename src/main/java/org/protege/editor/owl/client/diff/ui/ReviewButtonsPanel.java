@@ -35,7 +35,6 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executors;
@@ -52,7 +51,9 @@ public class ReviewButtonsPanel extends JPanel implements Disposable {
     private LogDiffManager diffManager;
     private ReviewManager reviewManager;
     private OWLEditorKit editorKit;
-    private JButton rejectBtn, clearBtn, acceptBtn, commitBtn, squashHistoryBtn, conceptHistoryBtn;
+
+    private JButton rejectBtn, clearBtn, commitBtn, squashHistoryBtn, conceptHistoryBtn;
+
     private boolean read_only = false;
     private final ListeningExecutorService service = MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor());
     private ProgressDialog dlg = new ProgressDialog();
@@ -73,9 +74,7 @@ public class ReviewButtonsPanel extends JPanel implements Disposable {
     }
 
     private void addButtons() {
-        acceptBtn = getButton("Accept", acceptBtnListener);
-        acceptBtn.setToolTipText("Accept selected change(s)");
-
+        
         rejectBtn = getButton("Reject", rejectBtnListener);
         rejectBtn.setToolTipText("Reject selected change(s); rejected changes are undone");
 
@@ -94,7 +93,9 @@ public class ReviewButtonsPanel extends JPanel implements Disposable {
         JSeparator separator = new JSeparator(SwingConstants.HORIZONTAL);
         separator.setPreferredSize(new Dimension(20, 0));
 
-        add(rejectBtn); add(clearBtn); add(acceptBtn); add(separator); add(commitBtn); add(squashHistoryBtn);
+
+        add(rejectBtn); add(clearBtn); add(separator); add(commitBtn); add(squashHistoryBtn);
+
         add(conceptHistoryBtn);
         diffManager.addListener(changeSelectionListener);
         enable(true, squashHistoryBtn);
@@ -107,10 +108,10 @@ public class ReviewButtonsPanel extends JPanel implements Disposable {
         public void statusChanged(LogDiffEvent event) {
             if(event.equals(LogDiffEvent.CHANGE_SELECTION_CHANGED)) {
                 if(!diffManager.getSelectedChanges().isEmpty()) {
-                    enable(true, acceptBtn, clearBtn, rejectBtn);
+                    enable(true, clearBtn, rejectBtn);
                 }
                 else {
-                    enable(false, acceptBtn, clearBtn, rejectBtn);
+                    enable(false, clearBtn, rejectBtn);
                 }
             }
             if(event.equals(LogDiffEvent.CHANGE_REVIEWED) || event.equals(LogDiffEvent.ONTOLOGY_UPDATED)) {
@@ -129,16 +130,6 @@ public class ReviewButtonsPanel extends JPanel implements Disposable {
         public void actionPerformed(ActionEvent e) {
             for(Change c : diffManager.getSelectedChanges()) {
                 reviewManager.setReviewStatus(c, ReviewStatus.REJECTED);
-            }
-            diffManager.statusChanged(LogDiffEvent.CHANGE_REVIEWED);
-        }
-    };
-
-    private ActionListener acceptBtnListener = new ActionListener() {
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            for(Change c : diffManager.getSelectedChanges()) {
-                reviewManager.setReviewStatus(c, ReviewStatus.ACCEPTED);
             }
             diffManager.statusChanged(LogDiffEvent.CHANGE_REVIEWED);
         }
@@ -317,7 +308,6 @@ public class ReviewButtonsPanel extends JPanel implements Disposable {
     public void dispose() {
         rejectBtn.removeActionListener(rejectBtnListener);
         clearBtn.removeActionListener(clearBtnListener);
-        acceptBtn.removeActionListener(acceptBtnListener);
         commitBtn.removeActionListener(commitBtnListener);
         squashHistoryBtn.removeActionListener(squashHistoryBtnListener);
         diffManager.removeListener(changeSelectionListener);
