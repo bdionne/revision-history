@@ -46,7 +46,7 @@ public class ReviewButtonsPanel extends JPanel implements Disposable {
     private LogDiffManager diffManager;
     private ReviewManager reviewManager;
     private OWLEditorKit editorKit;
-    private JButton rejectBtn, clearBtn, acceptBtn, commitBtn, downloadBtn, conceptHistoryBtn;
+    private JButton rejectBtn, clearBtn, acceptBtn, commitBtn, squashHistoryBtn, conceptHistoryBtn;
     private boolean read_only = false;
 
     /**
@@ -77,8 +77,8 @@ public class ReviewButtonsPanel extends JPanel implements Disposable {
         commitBtn = getButton("Commit", commitBtnListener);
         commitBtn.setToolTipText("Commit all change reviews");
 
-        downloadBtn = getButton("Squash History", downloadBtnListener);
-        downloadBtn.setToolTipText("Squash and Archive history on server");
+        squashHistoryBtn = getButton("Squash History", squashHistoryBtnListener);
+        squashHistoryBtn.setToolTipText("Squash and Archive history on server");
         
         conceptHistoryBtn = getButton("History", conceptHistoryBtnListener);
         conceptHistoryBtn.setToolTipText("Push the concept history to the server");
@@ -86,10 +86,10 @@ public class ReviewButtonsPanel extends JPanel implements Disposable {
         JSeparator separator = new JSeparator(SwingConstants.HORIZONTAL);
         separator.setPreferredSize(new Dimension(20, 0));
 
-        add(rejectBtn); add(clearBtn); add(acceptBtn); add(separator); add(commitBtn); add(downloadBtn);
+        add(rejectBtn); add(clearBtn); add(acceptBtn); add(separator); add(commitBtn); add(squashHistoryBtn);
         add(conceptHistoryBtn);
         diffManager.addListener(changeSelectionListener);
-        enable(true, downloadBtn);
+        enable(true, squashHistoryBtn);
         enable(true, conceptHistoryBtn);
         
     }
@@ -146,7 +146,7 @@ public class ReviewButtonsPanel extends JPanel implements Disposable {
         }
     };
 
-    private ActionListener downloadBtnListener = new ActionListener() {
+    private ActionListener squashHistoryBtnListener = new ActionListener() {
         @Override
         public void actionPerformed(ActionEvent _e) {
             ClientSession clientSession = ClientSession.getInstance(editorKit);
@@ -296,7 +296,7 @@ public class ReviewButtonsPanel extends JPanel implements Disposable {
         clearBtn.removeActionListener(clearBtnListener);
         acceptBtn.removeActionListener(acceptBtnListener);
         commitBtn.removeActionListener(commitBtnListener);
-        downloadBtn.removeActionListener(downloadBtnListener);
+        squashHistoryBtn.removeActionListener(squashHistoryBtnListener);
         diffManager.removeListener(changeSelectionListener);
     }
 }
