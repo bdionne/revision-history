@@ -15,16 +15,20 @@ import org.protege.editor.owl.client.diff.model.*;
 import org.protege.editor.owl.client.event.CommitOperationEvent;
 import org.protege.editor.owl.client.ui.UserLoginPanel;
 import org.protege.editor.owl.model.OWLModelManager;
+import org.protege.editor.owl.model.event.EventType;
 import org.protege.editor.owl.server.api.CommitBundle;
 import org.protege.editor.owl.client.api.exception.ClientRequestException;
 import org.protege.editor.owl.server.policy.CommitBundleImpl;
 import org.protege.editor.owl.server.versioning.Commit;
+import org.protege.editor.owl.server.versioning.api.ServerDocument;
 import org.protege.editor.owl.server.versioning.api.ChangeHistory;
 import org.protege.editor.owl.server.versioning.api.DocumentRevision;
 import org.protege.editor.owl.server.versioning.api.RevisionMetadata;
 import org.protege.editor.owl.server.versioning.api.VersionedOWLOntology;
 import org.protege.editor.owl.server.util.SnapShot;
 import org.semanticweb.owlapi.model.OWLOntologyChange;
+import org.semanticweb.owlapi.apibinding.OWLManager;
+import org.protege.editor.owl.ui.util.ProgressDialog;
 
 import javax.swing.*;
 import java.awt.*;
@@ -34,7 +38,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Executors;
 
+import com.google.common.util.concurrent.*;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
@@ -48,6 +54,8 @@ public class ReviewButtonsPanel extends JPanel implements Disposable {
     private OWLEditorKit editorKit;
     private JButton rejectBtn, clearBtn, acceptBtn, commitBtn, squashHistoryBtn, conceptHistoryBtn;
     private boolean read_only = false;
+    private final ListeningExecutorService service = MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor());
+    private ProgressDialog dlg = new ProgressDialog();
 
     /**
      * Constructor
@@ -152,15 +160,30 @@ public class ReviewButtonsPanel extends JPanel implements Disposable {
             ClientSession clientSession = ClientSession.getInstance(editorKit);
             SnapShot snapshot = new SnapShot(clientSession.getActiveVersionOntology().getOntology());
             ProjectId projectId = clientSession.getActiveProject();
+            LocalHttpClient client = (LocalHttpClient) clientSession.getActiveClient();
 
-            try {
-                ((LocalHttpClient) clientSession.getActiveClient()).squashHistory(snapshot, projectId);
-            }
-            catch (ClientRequestException e) {
-                warn("Unable to squash history." + e);
-                return;
-            }
-            info("History squashed and archived on server.");
+            dlg.setMessage("Squashing history.");
+            service.submit(() -> {
+                try {
+                    client.squashHistory(snapshot, projectId);
+
+                    ServerDocument serverDocument = client.openProject(projectId);
+                    VersionedOWLOntology vont = client.buildVersionedOntology(
+                            serverDocument, OWLManager.createOWLOntologyManager(), projectId);
+
+                    clientSession.setActiveProject(projectId, vont);
+                    editorKit.getModelManager().fireEvent(EventType.ACTIVE_ONTOLOGY_CHANGED);
+                    dlg.setVisible(false);
+                    info("History squashed and archived on server.");
+                }
+                catch (ClientRequestException | AuthorizationException e) {
+                    warn("Unable to squash history." + e);
+                }
+                finally {
+                    dlg.setVisible(false);
+                }
+            });
+            dlg.setVisible(true);
         }
     };
     
