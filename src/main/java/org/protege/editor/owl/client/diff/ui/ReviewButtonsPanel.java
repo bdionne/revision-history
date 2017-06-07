@@ -190,10 +190,11 @@ public class ReviewButtonsPanel extends JPanel implements Disposable {
     
     private ActionListener conceptHistoryBtnListener = new ActionListener() {
         @Override
-        public void actionPerformed(ActionEvent e) { 
+        public void actionPerformed(ActionEvent e) {
+        	ClientSession sess = ClientSession.getInstance(editorKit);
         	try {
-        		if (((LocalHttpClient) ClientSession.getInstance(editorKit).getActiveClient()).isWorkFlowManager()) {
-        			((LocalHttpClient) ClientSession.getInstance(editorKit).getActiveClient()).genConceptHistory();
+        		if (((LocalHttpClient) sess.getActiveClient()).isWorkFlowManager(sess.getActiveProject())) {
+        			((LocalHttpClient) sess.getActiveClient()).genConceptHistory(sess.getActiveProject());
         			info("Concept history recorded on server.");
                 } else {
                 	warn("Only Workflow Managers can generate history.");
