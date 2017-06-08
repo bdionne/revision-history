@@ -1,6 +1,7 @@
 package org.protege.editor.owl.client.diff.ui;
 
 import edu.stanford.protege.metaproject.api.AuthToken;
+import edu.stanford.protege.metaproject.api.ProjectId;
 import org.protege.editor.core.Disposable;
 import org.protege.editor.core.ui.error.ErrorLogPanel;
 import org.protege.editor.owl.OWLEditorKit;
@@ -157,8 +158,11 @@ public class ReviewButtonsPanel extends JPanel implements Disposable {
         @Override
         public void actionPerformed(ActionEvent e) { 
         	try {
-        		if (((LocalHttpClient) ClientSession.getInstance(editorKit).getActiveClient()).isWorkFlowManager()) {
-        			((LocalHttpClient) ClientSession.getInstance(editorKit).getActiveClient()).genConceptHistory();
+						final ClientSession clientSession = ClientSession.getInstance(editorKit);
+						final ProjectId activeProject = clientSession.getActiveProject();
+						final LocalHttpClient activeClient = (LocalHttpClient) clientSession.getActiveClient();
+						if (activeClient.isWorkFlowManager(activeProject)) {
+        			activeClient.genConceptHistory(activeProject);
         			info("Concept history recorded on server.");
                 } else {
                 	warn("Only Workflow Managers can generate history.");
