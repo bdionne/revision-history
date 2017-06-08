@@ -37,6 +37,8 @@ import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 
 import com.google.common.util.concurrent.*;
@@ -154,27 +156,38 @@ public class ReviewButtonsPanel extends JPanel implements Disposable {
             LocalHttpClient client = (LocalHttpClient) clientSession.getActiveClient();
 
             dlg.setMessage("Squashing history.");
-            service.submit(() -> {
-                try {
-                    client.squashHistory(snapshot, projectId);
 
-                    ServerDocument serverDocument = client.openProject(projectId);
-                    VersionedOWLOntology vont = client.buildVersionedOntology(
-                            serverDocument, OWLManager.createOWLOntologyManager(), projectId);
+            ListenableFuture<Boolean> squashFuture = service.submit(
+                    new Callable<Boolean>() {
+                        public Boolean call() {
+                            try {
+                                client.squashHistory(snapshot, projectId);
 
-                    clientSession.setActiveProject(projectId, vont);
-                    editorKit.getModelManager().fireEvent(EventType.ACTIVE_ONTOLOGY_CHANGED);
-                    dlg.setVisible(false);
-                    info("History squashed and archived on server.");
-                }
-                catch (ClientRequestException | AuthorizationException e) {
-                    warn("Unable to squash history." + e);
-                }
-                finally {
-                    dlg.setVisible(false);
-                }
-            });
+                                ServerDocument serverDocument = client.openProject(projectId);
+                                VersionedOWLOntology vont = client.buildVersionedOntology(
+                                serverDocument, OWLManager.createOWLOntologyManager(), projectId);
+
+                                clientSession.setActiveProject(projectId, vont);
+                                editorKit.getModelManager().fireEvent(EventType.ACTIVE_ONTOLOGY_CHANGED);
+                                dlg.setVisible(false);
+                                return Boolean.TRUE;
+                            }
+                            catch (ClientRequestException | AuthorizationException e) {
+                                dlg.setVisible(false);
+                                return Boolean.FALSE;
+                            }
+                        }});
             dlg.setVisible(true);
+
+            try {
+                if (squashFuture.get()) {
+                    info("History squashed and archived on server.");
+                } else {
+                    warn("Unable to squash history.");
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                warn("Unable to squash history." + e);
+            }
         }
     };
     
